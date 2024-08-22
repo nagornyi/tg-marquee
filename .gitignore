@@ -1,0 +1,5 @@
+.venv
+.env
+config.db
+user_session.session
+.vscode

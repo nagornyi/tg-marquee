@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TG Marquee Admin</title>
+    <link rel="stylesheet" type="text/css" media='all' href="{{ url_for('static', filename='styles/admin.css') }}">
+    <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+</head>
+<body>
+    <h1>Update Telegram API Config</h1>
+    <form method="POST">
+        <label for="api_id">API ID:</label>
+        <input type="text" name="api_id" value="{{ config[0] if config else '' }}" required><br><br>
+        
+        <label for="api_hash">API Hash:</label>
+        <input type="text" name="api_hash" value="{{ config[1] if config else '' }}" required><br><br>
+        
+        <label for="phone_number">Phone Number:</label>
+        <input type="text" name="phone_number" value="{{ config[2] if config else '' }}" required><br><br>
+        
+        <label for="channel_id">Channel ID:</label>
+        <input type="text" name="channel_id" value="{{ config[3] if config else '' }}" required><br><br>
+        
+        <input type="submit" value="Update">
+    </form>
+</body>
+</html>

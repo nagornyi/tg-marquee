@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TG Marquee</title>
+    <link rel="stylesheet" type="text/css" media='all' href="{{ url_for('static', filename='styles/main.css') }}">
+    <script src="{{ url_for('static', filename='js/ticker-updater.js') }}"></script>
+    <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+</head>
+<body>
+
+<div id="mainmodal">
+    <div class="modalcontent">
+        <div class="marquee">
+            <div id="marquee-text"></div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
