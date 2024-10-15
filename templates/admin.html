@@ -8,8 +8,9 @@
     <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
 </head>
 <body>
-    <h1>Update Telegram API Config</h1>
+    <h1>Admin</h1>
     <form method="POST">
+        <h2>Telegram API Configuration</h2>
         <label for="api_id">API ID:</label>
         <input type="text" name="api_id" value="{{ config[0] if config else '' }}" required><br><br>
         
@@ -22,6 +23,13 @@
         <label for="channel_id">Channel ID:</label>
         <input type="text" name="channel_id" value="{{ config[3] if config else '' }}" required><br><br>
         
+        <h2>Marquee Settings</h2>
+        <label for="scrollSpeed">Scroll Speed:</label>
+        <input type="number" id="scrollSpeed" name="scrollSpeed" value="{{ config[4] if config else '' }}" min="10" step="10"><br><br>
+        
+        <label for="updateInterval">Update Interval (seconds):</label>
+        <input type="number" id="updateInterval" name="updateInterval" value="{{ config[5] if config else '' }}" min="10" step="10"><br><br>
+
         <input type="submit" value="Update">
     </form>
 </body>

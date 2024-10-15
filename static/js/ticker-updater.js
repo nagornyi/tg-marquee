@@ -1,4 +1,14 @@
 let currentMarqueeText = '';
+let scrollSpeed = 200;  // Default value
+let updateInterval = 60000;  // Default value (in ms)
+
+async function fetchSettings() {
+  const response = await fetch('/get_settings');
+  const settings = await response.json();
+
+  scrollSpeed = parseInt(settings.scroll_speed, 10);
+  updateInterval = parseInt(settings.update_interval, 10) * 1000;  // Convert to ms
+}
 
 async function fetchMessages() {
     const response = await fetch('/get_messages');
@@ -31,14 +41,14 @@ function adjustMarqueeSpeed() {
     const containerWidth = marqueeContainer.clientWidth;
 
     // Calculate the duration for scrolling
-    const speed = 200; // Adjust this value to control the speed
-    const duration = (textWidth + containerWidth) / speed;
+    const duration = (textWidth + containerWidth) / scrollSpeed;
 
     // Apply the animation duration
     marqueeText.style.animationDuration = `${duration}s`;
 }
 
 document.addEventListener("DOMContentLoaded", function() {
-    fetchMessages();  // Initial fetch
-    setInterval(fetchMessages, 60000);  // Update messages every 60 seconds
+    fetchSettings();  // Initial fetch of settings
+    fetchMessages();  // Initial fetch of messages
+    setInterval(fetchMessages, updateInterval);  // Update messages periodically
 });

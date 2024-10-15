@@ -24,7 +24,9 @@ def init_db():
             api_id TEXT,
             api_hash TEXT,
             phone_number TEXT,
-            channel_id INTEGER
+            channel_id INTEGER,
+            scroll_speed INTEGER,
+            update_interval INTEGER
         )
     ''')
     conn.commit()
@@ -33,17 +35,17 @@ def init_db():
 def get_config():
     conn = sqlite3.connect('config.db')
     cursor = conn.cursor()
-    cursor.execute("SELECT api_id, api_hash, phone_number, channel_id FROM config WHERE id=1")
+    cursor.execute("SELECT api_id, api_hash, phone_number, channel_id, scroll_speed, update_interval FROM config WHERE id=1")
     row = cursor.fetchone()
     conn.close()
     return row
 
-def set_config(api_id, api_hash, phone_number, channel_id):
+def set_config(api_id, api_hash, phone_number, channel_id, scroll_speed=200, update_interval=60):
     conn = sqlite3.connect('config.db')
     cursor = conn.cursor()
-    cursor.execute('''INSERT OR REPLACE INTO config (id, api_id, api_hash, phone_number, channel_id)
+    cursor.execute('''INSERT OR REPLACE INTO config (id, api_id, api_hash, phone_number, channel_id, scroll_speed, update_interval)
                       VALUES (1, ?, ?, ?, ?)''',
-                   (api_id, api_hash, phone_number, channel_id))
+                   (api_id, api_hash, phone_number, channel_id, scroll_speed, update_interval))
     conn.commit()
     conn.close()
 
@@ -72,7 +74,9 @@ def admin():
         api_hash = request.form['api_hash']
         phone_number = request.form['phone_number']
         channel_id = request.form['channel_id']
-        set_config(api_id, api_hash, phone_number, channel_id)
+        scroll_speed = request.form['scroll_speed']
+        update_interval = request.form['update_interval']
+        set_config(api_id, api_hash, phone_number, channel_id, scroll_speed, update_interval)
         return redirect(url_for('index'))
     
     config = get_config()
@@ -95,6 +99,14 @@ def get_messages():
     asyncio.set_event_loop(loop)
     messages = loop.run_until_complete(fetch_messages())
     return jsonify(messages)
+
+@app.route('/get_settings', methods=['GET'])
+def get_settings():
+    conn = sqlite3.connect('config.db')
+    settings = conn.execute('SELECT scroll_speed, update_interval FROM config WHERE id=1').fetchall()
+    conn.close()
+    settings_dict = {setting['key']: setting['value'] for setting in settings}
+    return jsonify(settings_dict)
 
 async def fetch_messages():
     """Fetch all messages from Telegram channel"""
