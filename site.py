@@ -14,6 +14,8 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 SECRET_KEY = os.getenv('SECRET_KEY', 'default_secret_key')
 app.secret_key = SECRET_KEY
 
+# Database access functions
+
 def init_db():
     """Initialize the SQLite database"""
     conn = sqlite3.connect('config.db')
@@ -24,13 +26,34 @@ def init_db():
             api_id TEXT,
             api_hash TEXT,
             phone_number TEXT,
-            channel_id INTEGER
+            channel_id INTEGER,
+            scroll_speed INTEGER DEFAULT 200,
+            update_interval INTEGER DEFAULT 60
         )
     ''')
+
+    # Check and add new columns if they don't exist
+    existing_columns = [row[1] for row in cursor.execute('PRAGMA table_info(config)')]
+
+    # Add scroll_speed column if it doesn't exist
+    if 'scroll_speed' not in existing_columns:
+        cursor.execute('ALTER TABLE config ADD COLUMN scroll_speed INTEGER DEFAULT 200')
+
+    # Add update_interval column if it doesn't exist
+    if 'update_interval' not in existing_columns:
+        cursor.execute('ALTER TABLE config ADD COLUMN update_interval INTEGER DEFAULT 60')
+
+    # Update any existing rows where scroll_speed or update_interval are NULL
+    cursor.execute('''
+        UPDATE config
+        SET scroll_speed = COALESCE(scroll_speed, 200),
+            update_interval = COALESCE(update_interval, 60)
+    ''')
+
     conn.commit()
     conn.close()
 
-def get_config():
+def get_api_credentials():
     conn = sqlite3.connect('config.db')
     cursor = conn.cursor()
     cursor.execute("SELECT api_id, api_hash, phone_number, channel_id FROM config WHERE id=1")
@@ -38,71 +61,40 @@ def get_config():
     conn.close()
     return row
 
-def set_config(api_id, api_hash, phone_number, channel_id):
+def get_marquee_settings():
     conn = sqlite3.connect('config.db')
     cursor = conn.cursor()
-    cursor.execute('''INSERT OR REPLACE INTO config (id, api_id, api_hash, phone_number, channel_id)
-                      VALUES (1, ?, ?, ?, ?)''',
-                   (api_id, api_hash, phone_number, channel_id))
+    cursor.execute("SELECT scroll_speed, update_interval FROM config WHERE id=1")
+    row = cursor.fetchone()
+    conn.close()
+    return row
+
+def get_config():
+    conn = sqlite3.connect('config.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT api_id, api_hash, phone_number, channel_id, scroll_speed, update_interval FROM config WHERE id=1")
+    row = cursor.fetchone()
+    conn.close()
+    return row
+
+def set_config(api_id, api_hash, phone_number, channel_id, scroll_speed=200, update_interval=60):
+    conn = sqlite3.connect('config.db')
+    cursor = conn.cursor()
+    cursor.execute('''INSERT OR REPLACE INTO config (id, api_id, api_hash, phone_number, channel_id, scroll_speed, update_interval)
+                      VALUES (1, ?, ?, ?, ?, ?, ?)''',
+                   (api_id, api_hash, phone_number, channel_id, scroll_speed, update_interval))
     conn.commit()
     conn.close()
 
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        password = request.form['password']
-        if password == ADMIN_PASSWORD:
-            session['logged_in'] = True
-            return redirect(url_for('admin'))
-        else:
-            return render_template('login.html', error="Invalid password")
-    return render_template('login.html')
-
-@app.route('/admin', methods=['GET', 'POST'])
-def admin():
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    
-    if request.method == 'POST':
-        api_id = request.form['api_id']
-        api_hash = request.form['api_hash']
-        phone_number = request.form['phone_number']
-        channel_id = request.form['channel_id']
-        set_config(api_id, api_hash, phone_number, channel_id)
-        return redirect(url_for('index'))
-    
-    config = get_config()
-    return render_template('admin.html', config=config)
-
-@app.route('/logout')
-def logout():
-    session.pop('logged_in', None)
-    return redirect(url_for('index'))
-
-# Health check route
-@app.route('/health', methods=['GET'])
-def health_check():
-    return jsonify({"status": "healthy"}), 200
-
-@app.route('/get_messages', methods=['GET'])
-def get_messages():
-    # Run async code in a separate event loop
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    messages = loop.run_until_complete(fetch_messages())
-    return jsonify(messages)
+# Telegram API access functions
 
 async def fetch_messages():
     """Fetch all messages from Telegram channel"""
-    config = get_config()
-    if not config:
+    api_creds = get_api_credentials()
+    if not api_creds:
         return []
 
-    api_id, api_hash, phone_number, channel_id = config
+    api_id, api_hash, phone_number, channel_id = api_creds
     # Initialize Telegram Client
     client = TelegramClient('user_session', api_id, api_hash)
     await client.start(phone_number)
@@ -131,6 +123,67 @@ async def fetch_messages():
     
     await client.disconnect()
     return messages
+
+# Routes
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        password = request.form['password']
+        if password == ADMIN_PASSWORD:
+            session['logged_in'] = True
+            return redirect(url_for('admin'))
+        else:
+            return render_template('login.html', error="Invalid password")
+    return render_template('login.html')
+
+@app.route('/admin', methods=['GET', 'POST'])
+def admin():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        api_id = request.form['api_id']
+        api_hash = request.form['api_hash']
+        phone_number = request.form['phone_number']
+        channel_id = request.form['channel_id']
+        scroll_speed = request.form['scroll_speed']
+        update_interval = request.form['update_interval']
+        set_config(api_id, api_hash, phone_number, channel_id, scroll_speed, update_interval)
+    
+    config = get_config()
+    return render_template('admin.html', config=config)
+
+@app.route('/logout')
+def logout():
+    session.pop('logged_in', None)
+    return redirect(url_for('index'))
+
+# Health check route
+@app.route('/health', methods=['GET'])
+def health_check():
+    return jsonify({"status": "healthy"}), 200
+
+@app.route('/get_messages', methods=['GET'])
+def get_messages():
+    # Run async code in a separate event loop
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    messages = loop.run_until_complete(fetch_messages())
+    return jsonify(messages)
+
+@app.route('/get_settings', methods=['GET'])
+def get_settings():
+    settings = get_marquee_settings()
+    settings_dict = {
+        'scroll_speed': settings[0],  # This will be None if no value is present
+        'update_interval': settings[1]  # This will be None if no value is present
+    }
+    return jsonify(settings_dict)
 
 if __name__ == '__main__':
     init_db()
