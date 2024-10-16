@@ -14,6 +14,8 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 SECRET_KEY = os.getenv('SECRET_KEY', 'default_secret_key')
 app.secret_key = SECRET_KEY
 
+# Database access functions
+
 def init_db():
     """Initialize the SQLite database"""
     conn = sqlite3.connect('config.db')
@@ -25,12 +27,47 @@ def init_db():
             api_hash TEXT,
             phone_number TEXT,
             channel_id INTEGER,
-            scroll_speed INTEGER,
-            update_interval INTEGER
+            scroll_speed INTEGER DEFAULT 200,
+            update_interval INTEGER DEFAULT 60
         )
     ''')
+
+    # Check and add new columns if they don't exist
+    existing_columns = [row[1] for row in cursor.execute('PRAGMA table_info(config)')]
+
+    # Add scroll_speed column if it doesn't exist
+    if 'scroll_speed' not in existing_columns:
+        cursor.execute('ALTER TABLE config ADD COLUMN scroll_speed INTEGER DEFAULT 200')
+
+    # Add update_interval column if it doesn't exist
+    if 'update_interval' not in existing_columns:
+        cursor.execute('ALTER TABLE config ADD COLUMN update_interval INTEGER DEFAULT 60')
+
+    # Update any existing rows where scroll_speed or update_interval are NULL
+    cursor.execute('''
+        UPDATE config
+        SET scroll_speed = COALESCE(scroll_speed, 200),
+            update_interval = COALESCE(update_interval, 60)
+    ''')
+
     conn.commit()
     conn.close()
+
+def get_api_credentials():
+    conn = sqlite3.connect('config.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT api_id, api_hash, phone_number, channel_id FROM config WHERE id=1")
+    row = cursor.fetchone()
+    conn.close()
+    return row
+
+def get_marquee_settings():
+    conn = sqlite3.connect('config.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT scroll_speed, update_interval FROM config WHERE id=1")
+    row = cursor.fetchone()
+    conn.close()
+    return row
 
 def get_config():
     conn = sqlite3.connect('config.db')
@@ -44,10 +81,50 @@ def set_config(api_id, api_hash, phone_number, channel_id, scroll_speed=200, upd
     conn = sqlite3.connect('config.db')
     cursor = conn.cursor()
     cursor.execute('''INSERT OR REPLACE INTO config (id, api_id, api_hash, phone_number, channel_id, scroll_speed, update_interval)
-                      VALUES (1, ?, ?, ?, ?)''',
+                      VALUES (1, ?, ?, ?, ?, ?, ?)''',
                    (api_id, api_hash, phone_number, channel_id, scroll_speed, update_interval))
     conn.commit()
     conn.close()
+
+# Telegram API access functions
+
+async def fetch_messages():
+    """Fetch all messages from Telegram channel"""
+    api_creds = get_api_credentials()
+    if not api_creds:
+        return []
+
+    api_id, api_hash, phone_number, channel_id = api_creds
+    # Initialize Telegram Client
+    client = TelegramClient('user_session', api_id, api_hash)
+    await client.start(phone_number)
+
+    messages = []
+    last_message_id = 0
+
+    try:
+        while True:
+            # Fetch messages in batches of 100
+            batch = []
+            async for message in client.iter_messages(channel_id, limit=100, offset_id=last_message_id):
+                batch.append(message.text)
+                last_message_id = message.id
+            
+            if not batch:
+                break  # No more messages to fetch
+            
+            messages.extend(batch)
+    
+    except errors.FloodWait as e:
+        print(f'Rate limit exceeded. Sleeping for {e.seconds} seconds.')
+        await asyncio.sleep(e.seconds)
+    except Exception as e:
+        print(f'An error occurred: {e}')
+    
+    await client.disconnect()
+    return messages
+
+# Routes
 
 @app.route('/')
 def index():
@@ -77,7 +154,6 @@ def admin():
         scroll_speed = request.form['scroll_speed']
         update_interval = request.form['update_interval']
         set_config(api_id, api_hash, phone_number, channel_id, scroll_speed, update_interval)
-        return redirect(url_for('index'))
     
     config = get_config()
     return render_template('admin.html', config=config)
@@ -102,47 +178,12 @@ def get_messages():
 
 @app.route('/get_settings', methods=['GET'])
 def get_settings():
-    conn = sqlite3.connect('config.db')
-    settings = conn.execute('SELECT scroll_speed, update_interval FROM config WHERE id=1').fetchall()
-    conn.close()
-    settings_dict = {setting['key']: setting['value'] for setting in settings}
+    settings = get_marquee_settings()
+    settings_dict = {
+        'scroll_speed': settings[0],  # This will be None if no value is present
+        'update_interval': settings[1]  # This will be None if no value is present
+    }
     return jsonify(settings_dict)
-
-async def fetch_messages():
-    """Fetch all messages from Telegram channel"""
-    config = get_config()
-    if not config:
-        return []
-
-    api_id, api_hash, phone_number, channel_id = config
-    # Initialize Telegram Client
-    client = TelegramClient('user_session', api_id, api_hash)
-    await client.start(phone_number)
-
-    messages = []
-    last_message_id = 0
-
-    try:
-        while True:
-            # Fetch messages in batches of 100
-            batch = []
-            async for message in client.iter_messages(channel_id, limit=100, offset_id=last_message_id):
-                batch.append(message.text)
-                last_message_id = message.id
-            
-            if not batch:
-                break  # No more messages to fetch
-            
-            messages.extend(batch)
-    
-    except errors.FloodWait as e:
-        print(f'Rate limit exceeded. Sleeping for {e.seconds} seconds.')
-        await asyncio.sleep(e.seconds)
-    except Exception as e:
-        print(f'An error occurred: {e}')
-    
-    await client.disconnect()
-    return messages
 
 if __name__ == '__main__':
     init_db()

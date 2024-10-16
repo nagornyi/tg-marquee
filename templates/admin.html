@@ -24,11 +24,11 @@
         <input type="text" name="channel_id" value="{{ config[3] if config else '' }}" required><br><br>
         
         <h2>Marquee Settings</h2>
-        <label for="scrollSpeed">Scroll Speed:</label>
-        <input type="number" id="scrollSpeed" name="scrollSpeed" value="{{ config[4] if config else '' }}" min="10" step="10"><br><br>
+        <label for="scroll_speed">Scroll Speed:</label>
+        <input type="number" name="scroll_speed" value="{{ config[4] if config else '' }}" min="10" step="10"><br><br>
         
-        <label for="updateInterval">Update Interval (seconds):</label>
-        <input type="number" id="updateInterval" name="updateInterval" value="{{ config[5] if config else '' }}" min="10" step="10"><br><br>
+        <label for="update_interval">Update Interval (seconds):</label>
+        <input type="number" name="update_interval" value="{{ config[5] if config else '' }}" min="10" step="10"><br><br>
 
         <input type="submit" value="Update">
     </form>

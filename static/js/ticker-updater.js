@@ -1,13 +1,22 @@
+const settingsUpdateInterval = 60000;
 let currentMarqueeText = '';
 let scrollSpeed = 200;  // Default value
-let updateInterval = 60000;  // Default value (in ms)
+let msgUpdateInterval = 60000;  // Default value (in ms)
+let messageFetchInterval;
 
 async function fetchSettings() {
   const response = await fetch('/get_settings');
   const settings = await response.json();
 
-  scrollSpeed = parseInt(settings.scroll_speed, 10);
-  updateInterval = parseInt(settings.update_interval, 10) * 1000;  // Convert to ms
+  if (settings.scroll_speed) scrollSpeed = parseInt(settings.scroll_speed, 10);
+  if (settings.update_interval) msgUpdateInterval = parseInt(settings.update_interval, 10) * 1000;  // Convert to ms
+
+  // Set the interval to fetch messages after settings are fetched
+  clearInterval(messageFetchInterval);
+  messageFetchInterval = setInterval(fetchMessages, msgUpdateInterval);
+
+  // Recalculate the marquee speed with the new scrollSpeed
+  adjustMarqueeSpeed();
 }
 
 async function fetchMessages() {
@@ -45,10 +54,14 @@ function adjustMarqueeSpeed() {
 
     // Apply the animation duration
     marqueeText.style.animationDuration = `${duration}s`;
+
+    // Restart the marquee animation to apply the new speed
+    marqueeText.offsetHeight;  // Force reflow to restart the animation
 }
 
 document.addEventListener("DOMContentLoaded", function() {
     fetchSettings();  // Initial fetch of settings
     fetchMessages();  // Initial fetch of messages
-    setInterval(fetchMessages, updateInterval);  // Update messages periodically
+    // Set the interval to fetch settings periodically
+    setInterval(fetchSettings, settingsUpdateInterval);
 });
