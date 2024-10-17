@@ -1,10 +1,16 @@
 # TG Marquee
 
-Simple Flask app in Python that fetches messages from a Telegram channel using Telethon and displays them as a scrolling marquee in the browser.
+Simple Flask application in Python that fetches messages from a Telegram channel using Telethon and displays them as a scrolling marquee in the browser.
+
+# Prerequisites
+
+1. You need a phone number to use the Telegram API, you've probably already got one.
+2. You need to use your personal Telegram API credentials for authorisation (api_id and api_hash), please get them here https://my.telegram.org/apps
+3. Get the Telegram channel ID from the channel you want to retrieve your messages from. This is a long negative number, you can easily find the channel ID if you open your channel in Telegram Web UI, it's the last part of the URL. If the channel URL is `https://web.telegram.org/a/#-1001234567890`, then the channel ID would be `-1001234567890`.
 
 # Installation
 
-Create `.env` file with Admin Password and Secret Key (make this key long and random for improved security):
+Create `.env' file with Admin Password and Secret Key (make this key long and random for better security):
 ```sh
 ADMIN_PASSWORD="[YOUR_SECURE_PASSWORD]"
 SECRET_KEY="[YOUR_VERY_SECRET_KEY]"
@@ -22,12 +28,12 @@ python3 site.py
 
 # Configuration
 
-If you are running this app on the server, you would need to copy `.env` file to that server first.
+If you are running this application on the server, you will need to copy the `.env` file to the server first.
 
-Open the Admin page `http://127.0.0.1:8000/admin` and add your Telegram API credentials and Channel ID (your credentials will be stored in a local database). Your admin password is the string that you exported to ADMIN_PASSWORD environment variable from `.env` file, please keep it secure. Also you can change the messages update interval and marquee scrolling speed from this page.
+Open the admin page `http://127.0.0.1:8000/admin`, then add your Telegram API credentials and channel ID (your credentials are stored in a local database on the same instance). Your admin password is the string you exported to the `ADMIN_PASSWORD` environment variable from the `.env` file, please keep it safe. You can also change the update interval and marquee scrolling speed from the admin page.
 
-The first time you access Telegram API with your credentials Telegram will ask you to enter a confirmation code and the `user_session.session` file will be created. Please copy this file to the server where you plan to deploy this app if you don't want to enter the confirmation code again.
+The first time you access Telegram API with your credentials, Telegram will ask you to enter a confirmation code and the file `user_session.session` will be created. Please copy this file to the server where you want to deploy this application if you don't want to enter the confirmation code again.
 
 # Usage
 
-Just open `http://127.0.0.1:8000` to see the scrolling marquee, it will update automatically every 60 seconds, fetching all messages from your Telegram channel using API credentials that you configured on Admin page.
+Open `http://127.0.0.1:8000` to see the scrolling marquee, it will update automatically every 60 seconds (the default period that can be changed along with the scrolling speed). The marquee will retrieve all the messages from your Telegram channel using the channel ID that you have specified on the admin page. The new messages will be placed at the beginning of the scrolling marquee.
