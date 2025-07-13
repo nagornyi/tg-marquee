@@ -21,9 +21,16 @@ Install packages:
 pip3 install -r requirements.txt
 ```
 
-Run the app:
+Run the app in Development mode:
+
 ```sh
-python3 site.py
+python3 app.py
+```
+
+Run the app in Production mode:
+
+```sh
+gunicorn app:app
 ```
 
 # Configuration

@@ -54,7 +54,7 @@ body {
   cursor: not-allowed;
 }
 
-textarea {
+#message {
   font-size: 18px;
   padding: 15px;
   border: 1px solid #666666;
@@ -65,6 +65,7 @@ textarea {
   box-sizing: border-box;
   background-color: #2C2C2C;
   color: #E0E0E0;
+  min-height: 120px;
 }
 
 #progress-indicator {

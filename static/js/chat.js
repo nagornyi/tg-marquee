@@ -3,6 +3,11 @@ const messageHint = document.getElementById('message-hint');
 const messageField = document.getElementById('message');
 const submitButton = document.getElementById('tg-submit-btn');
 const progressIndicator = document.getElementById('progress-indicator');
+const charCount = document.getElementById('char-count');
+
+function updateCharCount() {
+  charCount.textContent = messageField.value.length;
+}
 
 function toggleSubmitButton() {
   if (messageField.value.trim() === '') {
@@ -12,7 +17,10 @@ function toggleSubmitButton() {
   }
 }
 
-messageField.addEventListener('input', toggleSubmitButton);
+messageField.addEventListener('input', function() {
+  updateCharCount();
+  toggleSubmitButton();
+});
 
 telegramForm.addEventListener('submit', function(e) {
   e.preventDefault();
@@ -44,5 +52,6 @@ telegramForm.addEventListener('submit', function(e) {
 
 window.onload = function() {
   messageField.value = '';
+  updateCharCount();
   toggleSubmitButton();
 };
