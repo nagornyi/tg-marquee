@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Chat</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/chat.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+    <script src="{{ url_for('static', filename='js/chat.js') }}" type="module"></script>
+</head>
+<body>
+    <div class="app">
+        <form id="messageForm">
+            <div id="message-hint">Відправте коротке повідомлення у стрічку:</div>
+            <textarea id="message" name="message" required maxlength="140"></textarea>
+            <div id="msg-limiter">
+                <span id="char-count">0</span>/140
+            </div>
+            <button id="tg-submit-btn" type="submit">Надіслати</button>
+        </form>
+        <div id="progress-indicator" style="display: none;"></div>
+    </div>
+</body>
+</html>

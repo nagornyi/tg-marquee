@@ -126,6 +126,38 @@ async def fetch_messages():
 
 # Routes
 
+@app.route('/chat')
+def chat():
+    return render_template('chat.html')
+
+# Route to send a message to the configured Telegram channel
+@app.route('/send_message', methods=['POST'])
+def send_message():
+    if not request.json or 'message' not in request.json:
+        return jsonify({'ok': False, 'error': 'No message provided'}), 400
+    message = request.json['message']
+    api_creds = get_api_credentials()
+    if not api_creds:
+        return jsonify({'ok': False, 'error': 'API credentials not configured'}), 500
+    api_id, api_hash, phone_number, channel_id = api_creds
+    async def send():
+        client = TelegramClient('user_session', api_id, api_hash)
+        await client.start(phone_number)
+        try:
+            await client.send_message(int(channel_id), message)
+            await client.disconnect()
+            return True, None
+        except Exception as e:
+            await client.disconnect()
+            return False, str(e)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    ok, error = loop.run_until_complete(send())
+    if ok:
+        return jsonify({'ok': True})
+    else:
+        return jsonify({'ok': False, 'error': error}), 500
+    
 @app.route('/')
 def index():
     return render_template('index.html')

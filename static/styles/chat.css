@@ -1,0 +1,79 @@
+* {
+  margin: 0;
+  padding: 0;
+  font-family: 'Roboto', sans-serif;
+  box-sizing: border-box;
+}
+
+body {
+  background: #121212;
+  color: #E0E0E0;
+  font-size: 18px;
+}
+
+.app {
+  background: #1E1E1E;
+  width: 90%;
+  max-width: 700px;
+  margin: 30px auto;
+  border-radius: 10px;
+  padding: 25px;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+}
+
+#message-hint {
+  font-size: 18px;
+  color: #E0E0E0;
+  padding-bottom: 20px;
+}
+
+#msg-limiter {
+  text-align: right;
+  font-size: 12px;
+  color: #888;
+}
+
+#tg-submit-btn {
+  background-color: #FF5733;
+  color: #FFFFFF;
+  border: none;
+  padding: 15px 25px;
+  font-size: 18px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+#tg-submit-btn:hover {
+  background-color: #C70039;
+}
+
+#tg-submit-btn:disabled {
+  background-color: #333333;
+  color: #999999;
+  cursor: not-allowed;
+}
+
+textarea {
+  font-size: 18px;
+  padding: 15px;
+  border: 1px solid #666666;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  width: 100%;
+  resize: none;
+  box-sizing: border-box;
+  background-color: #2C2C2C;
+  color: #E0E0E0;
+}
+
+#progress-indicator {
+  text-align: center;
+}
+
+@media (max-width: 600px) {
+  .app {
+      margin: 15px;
+      padding: 20px;
+  }
+}
