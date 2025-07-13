@@ -5,6 +5,10 @@ import asyncio
 import sqlite3
 import os
 
+# Default values for scroll speed and update interval
+DEFAULT_SCROLL_SPEED = 200
+DEFAULT_UPDATE_INTERVAL = 60
+
 app = Flask(__name__)
 
 load_dotenv()  # Load environment variables from .env file
@@ -20,15 +24,16 @@ def init_db():
     """Initialize the SQLite database"""
     conn = sqlite3.connect('config.db')
     cursor = conn.cursor()
-    cursor.execute('''
+
+    cursor.execute(f'''
         CREATE TABLE IF NOT EXISTS config (
             id INTEGER PRIMARY KEY,
             api_id TEXT,
             api_hash TEXT,
             phone_number TEXT,
             channel_id INTEGER,
-            scroll_speed INTEGER DEFAULT 200,
-            update_interval INTEGER DEFAULT 60
+            scroll_speed INTEGER DEFAULT {DEFAULT_SCROLL_SPEED},
+            update_interval INTEGER DEFAULT {DEFAULT_UPDATE_INTERVAL}
         )
     ''')
 
@@ -37,17 +42,17 @@ def init_db():
 
     # Add scroll_speed column if it doesn't exist
     if 'scroll_speed' not in existing_columns:
-        cursor.execute('ALTER TABLE config ADD COLUMN scroll_speed INTEGER DEFAULT 200')
+        cursor.execute(f'ALTER TABLE config ADD COLUMN scroll_speed INTEGER DEFAULT {DEFAULT_SCROLL_SPEED}')
 
     # Add update_interval column if it doesn't exist
     if 'update_interval' not in existing_columns:
-        cursor.execute('ALTER TABLE config ADD COLUMN update_interval INTEGER DEFAULT 60')
+        cursor.execute(f'ALTER TABLE config ADD COLUMN update_interval INTEGER DEFAULT {DEFAULT_UPDATE_INTERVAL}')
 
     # Update any existing rows where scroll_speed or update_interval are NULL
-    cursor.execute('''
+    cursor.execute(f'''
         UPDATE config
-        SET scroll_speed = COALESCE(scroll_speed, 200),
-            update_interval = COALESCE(update_interval, 60)
+        SET scroll_speed = COALESCE(scroll_speed, {DEFAULT_SCROLL_SPEED}),
+            update_interval = COALESCE(update_interval, {DEFAULT_UPDATE_INTERVAL})
     ''')
 
     conn.commit()
@@ -77,7 +82,7 @@ def get_config():
     conn.close()
     return row
 
-def set_config(api_id, api_hash, phone_number, channel_id, scroll_speed=200, update_interval=60):
+def set_config(api_id, api_hash, phone_number, channel_id, scroll_speed=DEFAULT_SCROLL_SPEED, update_interval=DEFAULT_UPDATE_INTERVAL):
     conn = sqlite3.connect('config.db')
     cursor = conn.cursor()
     cursor.execute('''INSERT OR REPLACE INTO config (id, api_id, api_hash, phone_number, channel_id, scroll_speed, update_interval)
@@ -188,6 +193,15 @@ def admin():
         set_config(api_id, api_hash, phone_number, channel_id, scroll_speed, update_interval)
     
     config = get_config()
+    # If config is None, prepopulate with defaults for scroll_speed and update_interval
+    if config is None:
+        config = ['', '', '', '', DEFAULT_SCROLL_SPEED, DEFAULT_UPDATE_INTERVAL]
+    # If scroll_speed or update_interval are None, set to defaults
+    config = list(config)
+    if config[4] is None:
+        config[4] = DEFAULT_SCROLL_SPEED
+    if config[5] is None:
+        config[5] = DEFAULT_UPDATE_INTERVAL
     return render_template('admin.html', config=config)
 
 @app.route('/logout')
@@ -211,12 +225,22 @@ def get_messages():
 @app.route('/get_settings', methods=['GET'])
 def get_settings():
     settings = get_marquee_settings()
-    settings_dict = {
-        'scroll_speed': settings[0],  # This will be None if no value is present
-        'update_interval': settings[1]  # This will be None if no value is present
-    }
+    
+    # Handle case where no configuration exists
+    if settings is None:
+        settings_dict = {
+            'scroll_speed': DEFAULT_SCROLL_SPEED,
+            'update_interval': DEFAULT_UPDATE_INTERVAL
+        }
+    else:
+        settings_dict = {
+            'scroll_speed': settings[0] if settings[0] is not None else DEFAULT_SCROLL_SPEED,
+            'update_interval': settings[1] if settings[1] is not None else DEFAULT_UPDATE_INTERVAL
+        }    
     return jsonify(settings_dict)
 
+# Initialize database when module is imported
+init_db()
+
 if __name__ == '__main__':
-    init_db()
     app.run(host="0.0.0.0", port=8000)
