@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session
 from telethon import TelegramClient, errors
+from telethon.sessions import StringSession
 from dotenv import load_dotenv
 import asyncio
 import sqlite3
@@ -17,6 +18,8 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 # Secure secret key
 SECRET_KEY = os.getenv('SECRET_KEY', 'default_secret_key')
 app.secret_key = SECRET_KEY
+# Retrieve Telegram String Session from environment variable
+TG_STRING_SESSION = os.getenv("TG_STRING_SESSION")
 
 # Database access functions
 
@@ -101,7 +104,7 @@ async def fetch_messages():
 
     api_id, api_hash, phone_number, channel_id = api_creds
     # Initialize Telegram Client
-    client = TelegramClient('user_session', api_id, api_hash)
+    client = TelegramClient(StringSession(TG_STRING_SESSION), api_id, api_hash)
     await client.start(phone_number)
 
     messages = []
@@ -120,7 +123,7 @@ async def fetch_messages():
             
             messages.extend(batch)
     
-    except errors.FloodWait as e:
+    except errors.FloodWaitError as e:
         print(f'Rate limit exceeded. Sleeping for {e.seconds} seconds.')
         await asyncio.sleep(e.seconds)
     except Exception as e:
@@ -146,7 +149,7 @@ def send_message():
         return jsonify({'ok': False, 'error': 'API credentials not configured'}), 500
     api_id, api_hash, phone_number, channel_id = api_creds
     async def send():
-        client = TelegramClient('user_session', api_id, api_hash)
+        client = TelegramClient(StringSession(TG_STRING_SESSION), api_id, api_hash)
         await client.start(phone_number)
         try:
             await client.send_message(int(channel_id), message)
