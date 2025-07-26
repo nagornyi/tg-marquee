@@ -19,6 +19,7 @@ Create `.env' file with Admin Password and Secret Key (make this key long and ra
 ADMIN_PASSWORD="[YOUR_SECURE_PASSWORD]"
 SECRET_KEY="[YOUR_VERY_SECRET_KEY]"
 TG_STRING_SESSION="[USER STRING SESSION]"
+REDIS_URL="redis://[YOUR_REDIS_INSTANCE]:6379"
 ```
 
 Install packages:
@@ -42,9 +43,9 @@ gunicorn app:app
 
 If you are running this application on the server, you will need to copy the `.env` file to the server first.
 
-Open the admin page `http://127.0.0.1:8000/admin`, then add your Telegram API credentials and channel ID (your credentials are stored in a local database on the same instance). Your admin password is the string you exported to the `ADMIN_PASSWORD` environment variable from the `.env` file, please keep it safe. You can also change the update interval and marquee scrolling speed from the admin page.
+Open the admin page `http://127.0.0.1:8000/admin`, then add your Telegram API credentials and channel ID (your credentials are stored in a Redis database). Your admin password is the string you exported to the `ADMIN_PASSWORD` environment variable from the `.env` file, please keep it safe. You can also change the update interval and marquee scrolling speed from the admin page.
 
-The first time you access Telegram API with your credentials, Telegram will ask you to enter a confirmation code and the file `user_session.session` will be created. Please copy this file to the server where you want to deploy this application if you don't want to enter the confirmation code again.
+The first time you access Telegram API with your credentials, Telegram will ask you to enter a confirmation code.
 
 # Usage
 

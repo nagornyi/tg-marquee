@@ -2,3 +2,4 @@ flask
 telethon
 python-dotenv
 gunicorn
+redis

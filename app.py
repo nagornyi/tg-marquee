@@ -3,7 +3,7 @@ from telethon import TelegramClient, errors
 from telethon.sessions import StringSession
 from dotenv import load_dotenv
 import asyncio
-import sqlite3
+import redis
 import os
 
 # Default values for scroll speed and update interval
@@ -21,78 +21,68 @@ app.secret_key = SECRET_KEY
 # Retrieve Telegram String Session from environment variable
 TG_STRING_SESSION = os.getenv("TG_STRING_SESSION")
 
-# Database access functions
+# Redis connection setup
+REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+redis_client = redis.Redis.from_url(REDIS_URL, decode_responses=True)
 
+# Database access functions (Redis)
 def init_db():
-    """Initialize the SQLite database"""
-    conn = sqlite3.connect('config.db')
-    cursor = conn.cursor()
-
-    cursor.execute(f'''
-        CREATE TABLE IF NOT EXISTS config (
-            id INTEGER PRIMARY KEY,
-            api_id TEXT,
-            api_hash TEXT,
-            phone_number TEXT,
-            channel_id INTEGER,
-            scroll_speed INTEGER DEFAULT {DEFAULT_SCROLL_SPEED},
-            update_interval INTEGER DEFAULT {DEFAULT_UPDATE_INTERVAL}
-        )
-    ''')
-
-    # Check and add new columns if they don't exist
-    existing_columns = [row[1] for row in cursor.execute('PRAGMA table_info(config)')]
-
-    # Add scroll_speed column if it doesn't exist
-    if 'scroll_speed' not in existing_columns:
-        cursor.execute(f'ALTER TABLE config ADD COLUMN scroll_speed INTEGER DEFAULT {DEFAULT_SCROLL_SPEED}')
-
-    # Add update_interval column if it doesn't exist
-    if 'update_interval' not in existing_columns:
-        cursor.execute(f'ALTER TABLE config ADD COLUMN update_interval INTEGER DEFAULT {DEFAULT_UPDATE_INTERVAL}')
-
-    # Update any existing rows where scroll_speed or update_interval are NULL
-    cursor.execute(f'''
-        UPDATE config
-        SET scroll_speed = COALESCE(scroll_speed, {DEFAULT_SCROLL_SPEED}),
-            update_interval = COALESCE(update_interval, {DEFAULT_UPDATE_INTERVAL})
-    ''')
-
-    conn.commit()
-    conn.close()
+    # No-op for Redis, but can be used for future migrations
+    pass
 
 def get_api_credentials():
-    conn = sqlite3.connect('config.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT api_id, api_hash, phone_number, channel_id FROM config WHERE id=1")
-    row = cursor.fetchone()
-    conn.close()
-    return row
+    creds = redis_client.hgetall('tgmarquee:config:api')
+    if not creds:
+        return None
+    channel_id = creds.get('channel_id')
+    # Convert to int if possible
+    if channel_id and channel_id.lstrip('-').isdigit():
+        channel_id = int(channel_id)
+    return (
+        creds.get('api_id'),
+        creds.get('api_hash'),
+        creds.get('phone_number'),
+        channel_id
+    )
 
 def get_marquee_settings():
-    conn = sqlite3.connect('config.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT scroll_speed, update_interval FROM config WHERE id=1")
-    row = cursor.fetchone()
-    conn.close()
-    return row
+    settings = redis_client.hgetall('tgmarquee:config:marquee')
+    if not settings:
+        return None
+    return (
+        int(settings.get('scroll_speed', DEFAULT_SCROLL_SPEED)),
+        int(settings.get('update_interval', DEFAULT_UPDATE_INTERVAL))
+    )
 
 def get_config():
-    conn = sqlite3.connect('config.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT api_id, api_hash, phone_number, channel_id, scroll_speed, update_interval FROM config WHERE id=1")
-    row = cursor.fetchone()
-    conn.close()
-    return row
+    api = redis_client.hgetall('tgmarquee:config:api')
+    marquee = redis_client.hgetall('tgmarquee:config:marquee')
+    if not api and not marquee:
+        return None
+    channel_id = api.get('channel_id', '')
+    if channel_id and channel_id.lstrip('-').isdigit():
+        channel_id = int(channel_id)
+    return (
+        api.get('api_id', ''),
+        api.get('api_hash', ''),
+        api.get('phone_number', ''),
+        channel_id,
+        int(marquee.get('scroll_speed', DEFAULT_SCROLL_SPEED)),
+        int(marquee.get('update_interval', DEFAULT_UPDATE_INTERVAL))
+    )
 
 def set_config(api_id, api_hash, phone_number, channel_id, scroll_speed=DEFAULT_SCROLL_SPEED, update_interval=DEFAULT_UPDATE_INTERVAL):
-    conn = sqlite3.connect('config.db')
-    cursor = conn.cursor()
-    cursor.execute('''INSERT OR REPLACE INTO config (id, api_id, api_hash, phone_number, channel_id, scroll_speed, update_interval)
-                      VALUES (1, ?, ?, ?, ?, ?, ?)''',
-                   (api_id, api_hash, phone_number, channel_id, scroll_speed, update_interval))
-    conn.commit()
-    conn.close()
+    redis_client.hset('tgmarquee:config:api', mapping={
+        'api_id': api_id,
+        'api_hash': api_hash,
+        'phone_number': phone_number,
+        'channel_id': channel_id
+    })
+    redis_client.hset('tgmarquee:config:marquee', mapping={
+        'scroll_speed': scroll_speed,
+        'update_interval': update_interval
+    })
+
 
 # Telegram API access functions
 
